@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "initializer_list": "c",
+        "iterator": "c",
+        "memory": "c",
+        "vector": "c",
+        "xmemory": "c",
+        "xstring": "c",
+        "xutility": "c",
+        "xlocale": "c",
+        "random": "c"
+    }
+}
