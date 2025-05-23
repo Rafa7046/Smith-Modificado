@@ -30,7 +30,7 @@ def test_system(num, den, delay, stop_time=5000, set_point=50.0, dt=0.1):
     sim_params = configure_simulation(num, den, delay, set_point, stop_time, dt)
     options = configure_options()
 
-    df = observer_controller_with_identification_rls_func(
+    df = run_all_simulations_func(
         num=sim_params["num"],
         den=sim_params["den"],
         stop_time=sim_params["stop_time"],
@@ -77,6 +77,61 @@ def main():
     results = []
     for num, den, delay, stop_time in tqdm(systems, desc="Systems", leave=False):
         result = test_system(num, den, delay, stop_time)
+        # Calculate metrics for each control method
+        def calc_metrics(t, y, set_point):
+            e = set_point - y
+            dt = np.diff(t, prepend=t[0])
+            iae = np.sum(np.abs(e) * dt)
+            ise = np.sum(e**2 * dt)
+            itae = np.sum(np.abs(e) * t * dt)
+            overshoot = (np.max(y) - set_point) / set_point * 100 if np.max(y) > set_point else 0
+            # Settling time: time when output enters and stays within 2% of set_point
+            within_bounds = np.abs(y - set_point) <= 0.02 * set_point
+            try:
+                idx = np.where(within_bounds)[0]
+                for i in idx:
+                    if np.any(within_bounds[i:]):
+                        settling_time = t[i]
+                        break
+                else:
+                    settling_time = np.nan
+            except:
+                settling_time = np.nan
+            return iae, ise, itae, overshoot, settling_time
+
+        set_point = 50.0  # Default, or extract from system if variable
+        metrics = {}
+        for ctrl, y_col in zip(
+            ['pid', 'smith'],
+            ['y_pid', 'y_smith']
+        ):
+            t = result['t']
+            y = result[y_col]
+            iae, ise, itae, overshoot, settling_time = calc_metrics(t, y, set_point)
+            metrics[ctrl] = {
+                'IAE': iae,
+                'ISE': ise,
+                'ITAE': itae,
+                'Overshoot (%)': overshoot,
+                'Settling Time (s)': settling_time,
+            }
+        row = {
+            'num': num,
+            'den': den,
+            'delay': delay,
+            'stop_time': stop_time,
+        }
+        for ctrl in metrics:
+            for metric in metrics[ctrl]:
+                row[f'{ctrl}_{metric}'] = metrics[ctrl][metric]
+        results.append(row)
+
+        # After loop, save table
+        if len(results) == len(systems):
+            df_results = pd.DataFrame(results)
+            df_results.to_excel('simulation_metrics.xlsx', index=False)
+            # print(df_results)
+
 
 
 

@@ -19,4 +19,11 @@ def observer_controller_with_identification_rls_func(num, den, stop_time, dt, de
 def run_all_simulations_func(num, den, stop_time, dt, delay, method=0, digital=0, pwm_duty_cycle=30, set_point=1.0):
     result = run_all_simulations(num, den, stop_time, dt, delay, method, set_point, pwm_duty_cycle, digital, params)
     plot_all_comparative(*result, set_point=set_point, identifier=den[0])
-    return result
+    result_dict = {
+        "t": result[0],
+        "u_pid": result[3],
+        "y_pid": result[4],
+        "u_smith": result[5],
+        "y_smith": result[6],
+    }
+    return result_dict
